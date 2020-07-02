@@ -9,7 +9,7 @@
 # Creating a shortcut :
 # 1. Create a new shortcut on Windows
 # 2. Add the following to the "Target" field in the properties of the shortcut :
-# C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -File "<PATH_TO_THIS_SCRIPT>\Link-ProjectToSFML.ps1" -NoExit
+# C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -File "<PATH_TO_THIS_SCRIPT>\Link-ProjectToSFML.ps1"
 #
 # In case your project file (.vcxproj) gets corrupt, don't worry ! A backup is automatically made before any modifications is saved.
 # The backup is located next to your project file and has a different name
@@ -19,7 +19,8 @@ Add-Type -AssemblyName System.Windows.Forms
 
 function Show-Error($msg)
 {
-    [System.Windows.Forms.MessageBox]::Show($msg, "Error", "Ok", "Error") | Out-Null
+    #[System.Windows.Forms.MessageBox]::Show($msg, "Error", "Ok", "Error") | Out-Null
+	Write-Host "ERROR : $msg"
 }
 
 function End-Script
