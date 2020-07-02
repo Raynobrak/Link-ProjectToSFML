@@ -1,3 +1,4 @@
+#
 # This script links SFML to an existing Visual Studio C++ project.
 # How to use :
 # 1. Create an "Empty C++ project" in Visual Studio
@@ -11,8 +12,8 @@
 # 2. Add the following to the "Target" field in the properties of the shortcut :
 # C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -File "<PATH_TO_THIS_SCRIPT>\Link-ProjectToSFML.ps1"
 #
-# In case your project file (.vcxproj) gets corrupt, don't worry ! A backup is automatically made before any modifications is saved.
-# The backup is located next to your project file and has a different name
+# In case your project file (.vcxproj) gets corrupt, don't worry ! A backup is automatically made before the file is saved.
+# The backup is located next to your project and has a different name
 #
 
 Add-Type -AssemblyName System.Windows.Forms
@@ -31,6 +32,13 @@ function End-Script
 }
 
 # Constants
+
+# This is the starting folder of the project file dialog. Set it to the folder that contains all your projects. 
+Set-Variable PROJECT_DIALOG_START_FOLDER -Option Constant -Value([string]"F:\data\projets\projets-personnels")
+
+# This is the starting folder of the SFML folder dialog. Set it to the folder that contains your libraries
+Set-Variable SFML_FOLDER_DIALOG_START_FOLDER -Option Constant -Value([string]"F:\data\libraries")
+
 Set-Variable SFML_INCLUDE_DIR -Option Constant -Value ([string]"\include")
 Set-Variable SFML_LIB_DIR -Option Constant -Value ([string]"\lib")
 Set-Variable SFML_BIN_DIR -Option Constant -Value ([string]"\bin")
@@ -38,8 +46,6 @@ Set-Variable SFML_DEBUG_LIBS -Option Constant -Value([string]"sfml-graphics-d.li
 Set-Variable SFML_RELEASE_LIBS -Option Constant -Value([string]"sfml-graphics.lib; sfml-window.lib; sfml-system.lib; kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)")
 Set-Variable BACKUP_PROJECT_FILENAME -Option Constant -Value([string]"backup-vcxproj-before-sfml-link.vcxproj")
 
-# This is the starting folder of the file dialog. Set it to the folder that contains all your projects. 
-Set-Variable PROJECT_DIALOG_START_FOLDER -Option Constant -Value([string]"F:\data\projets\projets-personnels")
 
 # Choosing a project file
 Write-Host "Please choose the Visual Studio C++ project (.vcxproj) you want to link to SFML..."
@@ -57,7 +63,7 @@ if($ProjectFileDialog.FileName.Length -eq 0 -or -not(Test-Path -Path $ProjectFil
 }
 
 $Project = $ProjectFileDialog.FileName
-Write-Host "Project chosen."
+Write-Host "Project chosen.`n"
 
 # Choosing the project target architecture
 
@@ -67,16 +73,16 @@ if($Arch -ne "32" -and $Arch -ne "64")
     Show-Error -msg "Stop being a dumbass and choose a valid architecture (32 or 64). Exiting script..."
     End-Script
 }
+Write-Host "Architecture : $Arch bit`n"
 
 #
 # Choosing SFML Directory
 #
 
 Write-Host "Select the location of the SFML library on your computer..."
-$DefaultInitialSFMLDirectory = "F:\data\libraries"
 
 $SFMLDirDialog = New-Object System.Windows.Forms.FolderBrowserDialog
-If(Test-Path $DefaultInitialSFMLDirectory) { $SFMLDirDialog.SelectedPath = $DefaultInitialSFMLDirectory }
+If(Test-Path $SFML_FOLDER_DIALOG_START_FOLDER) { $SFMLDirDialog.SelectedPath = $SFML_FOLDER_DIALOG_START_FOLDER }
 $SFMLDirDialog.ShowDialog() | Out-Null
 
 write-host $SFMLDirDialog.SelectedPath
@@ -88,6 +94,7 @@ if((-not $SFMLDirDialog.SelectedPath) -or (-not(Test-Path $SFMLDirDialog.Selecte
 }
 
 $SFMLDir = $SFMLDirDialog.SelectedPath
+Write-Host "SFML folder selected.`n"
 
 # Linking SFML to the chosen project
 [xml]$xml = Get-Content -Path $Project
@@ -96,7 +103,7 @@ $projectDir = (Get-Item -Path $Project).Directory.FullName
 Write-Host "Backup-ing the project file..."
 # The following line makes a backup of your .vcxproj file before the modifications.
 $xml.Save($projectDir + "\" + $BACKUP_PROJECT_FILENAME)
-Write-Host "Backup done. ($BACKUP_PROJECT_FILENAME)"
+Write-Host "Backup done. ($BACKUP_PROJECT_FILENAME)`n"
 
 if($xml.Length -eq 0)
 {
@@ -140,9 +147,9 @@ foreach($config in $xml.Project.ItemDefinitionGroup) {
 }
 
 # Copying DLLs into the project directory
-Write-Host "Copying DLLs into the project directory..."
+Write-Host "`nCopying DLLs into the project directory..."
 Copy-Item -Path ($SFMLDir + $SFML_BIN_DIR + '\*') -Destination $projectDir -Force
-Write-Host "Dlls copied."
+Write-Host "Dlls copied.`n"
 Write-Host "Saving project file..."
 $xml.Save($Project)
 Write-Host "Saved."
