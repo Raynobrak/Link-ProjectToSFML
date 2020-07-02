@@ -10,6 +10,10 @@
 # 1. Create a new shortcut on Windows
 # 2. Add the following to the "Target" field in the properties of the shortcut :
 # C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -File "<PATH_TO_THIS_SCRIPT>\Link-ProjectToSFML.ps1" -NoExit
+#
+# In case your project file (.vcxproj) gets corrupt, don't worry ! A backup is automatically made before any modifications is saved.
+# The backup is located next to your project file and has a different name
+#
 
 Add-Type -AssemblyName System.Windows.Forms
 
@@ -25,28 +29,21 @@ function End-Script
     exit
 }
 
-#
 # Constants
-#
 Set-Variable SFML_INCLUDE_DIR -Option Constant -Value ([string]"\include")
 Set-Variable SFML_LIB_DIR -Option Constant -Value ([string]"\lib")
 Set-Variable SFML_BIN_DIR -Option Constant -Value ([string]"\bin")
 Set-Variable SFML_DEBUG_LIBS -Option Constant -Value([string]"sfml-graphics-d.lib; sfml-window-d.lib; sfml-system-d.lib; kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)")
 Set-Variable SFML_RELEASE_LIBS -Option Constant -Value([string]"sfml-graphics.lib; sfml-window.lib; sfml-system.lib; kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)")
+Set-Variable BACKUP_PROJECT_FILENAME -Option Constant -Value([string]"backup-vcxproj-before-sfml-link.vcxproj")
 
-#
+# This is the starting folder of the file dialog. Set it to the folder that contains all your projects. 
+Set-Variable PROJECT_DIALOG_START_FOLDER -Option Constant -Value([string]"F:\data\projets\projets-personnels")
+
 # Choosing a project file
-#
-
 Write-Host "Please choose the Visual Studio C++ project (.vcxproj) you want to link to SFML..."
-
-
-
-# This is starting folder of the file dialog. Set it to the folder that contains all your projects. 
-$DefaultInitialProjectDirectory = "F:\data\projets\projets-personnels"
-
 $ProjectFileDialog = New-Object System.Windows.Forms.OpenFileDialog
-$ProjectFileDialog.InitialDirectory = If(Test-Path $DefaultInitialProjectDirectory) { $DefaultInitialProjectDirectory } else { [Environment]::GetFolderPath('Desktop') }
+$ProjectFileDialog.InitialDirectory = If(Test-Path $PROJECT_DIALOG_START_FOLDER) { $PROJECT_DIALOG_START_FOLDER } else { [Environment]::GetFolderPath('Desktop') }
 $ProjectFileDialog.Title = "Choose a project file"
 $ProjectFileDialog.Multiselect = $false
 $ProjectFileDialog.Filter = "VS C++ Project files (*.vcxproj)|*.vcxproj"
@@ -61,9 +58,7 @@ if($ProjectFileDialog.FileName.Length -eq 0 -or -not(Test-Path -Path $ProjectFil
 $Project = $ProjectFileDialog.FileName
 Write-Host "Project chosen."
 
-#
-# Choosing SFML architecture
-#
+# Choosing the project target architecture
 
 $Arch = Read-Host -Prompt "For what architecture do you want to link SFML ? (32 or 64)"
 if($Arch -ne "32" -and $Arch -ne "64")
@@ -93,15 +88,14 @@ if((-not $SFMLDirDialog.SelectedPath) -or (-not(Test-Path $SFMLDirDialog.Selecte
 
 $SFMLDir = $SFMLDirDialog.SelectedPath
 
-#
 # Linking SFML to the chosen project
-#
-
 [xml]$xml = Get-Content -Path $Project
 $projectDir = (Get-Item -Path $Project).Directory.FullName
 
-# Uncomment the following line to make a backup of your .vcxproj file before the modifications.
-#$xml.Save($projectDir + "\backup-before-sfml-link.vcxproj")
+Write-Host "Backup-ing the project file..."
+# The following line makes a backup of your .vcxproj file before the modifications.
+$xml.Save($projectDir + "\" + $BACKUP_PROJECT_FILENAME)
+Write-Host "Backup done. ($BACKUP_PROJECT_FILENAME)"
 
 if($xml.Length -eq 0)
 {
@@ -144,7 +138,7 @@ foreach($config in $xml.Project.ItemDefinitionGroup) {
     }
 }
 
-# Copying DLLs
+# Copying DLLs into the project directory
 Write-Host "Copying DLLs into the project directory..."
 Copy-Item -Path ($SFMLDir + $SFML_BIN_DIR + '\*') -Destination $projectDir -Force
 Write-Host "Dlls copied."
